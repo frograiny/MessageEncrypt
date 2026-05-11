@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Message Encrypt",
+  "version": "1.0.0",
+  "description": "Mã hóa tin nhắn Messenger để bảo vệ privacy",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.facebook.com/*",
+    "https://www.messenger.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.facebook.com/*",
+        "https://www.messenger.com/*"
+      ],
+      "js": [
+        "src/crypto.js",
+        "src/content.js"
+      ],
+      "css": ["src/styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Message Encrypt"
+  },
+  "icons": {
+    "16": "src/icons/icon-16.png",
+    "48": "src/icons/icon-48.png",
+    "128": "src/icons/icon-128.png"
+  }
+}

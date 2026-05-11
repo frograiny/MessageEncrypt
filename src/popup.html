@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Encrypt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 350px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .header {
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            font-size: 14px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        input[type="password"]::placeholder,
+        input[type="text"]::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        input[type="password"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: white;
+            background: rgba(255,255,255,0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .secondary-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .status.success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .status.warning {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+            border: 1px solid rgba(251, 146, 60, 0.4);
+        }
+
+        .hint {
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 15px 0;
+        }
+
+        .quick-action {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .quick-action button {
+            margin: 0;
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .encrypt-box {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .encrypt-box textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            font-size: 12px;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .encrypt-box textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .encrypt-box textarea:focus {
+            outline: none;
+            border-color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .info {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.9);
+            line-height: 1.4;
+        }
+
+        .info strong {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Encrypt</h1>
+            <p>Bảo vệ tin nhắn của bạn</p>
+        </div>
+
+        <div id="status"></div>
+
+        <div class="form-group">
+            <label for="passphrase">Mật khẩu (Passphrase):</label>
+            <input type="password" id="passphrase" placeholder="Nhập mật khẩu chung của nhóm...">
+            <div class="hint">⚠️ Mọi người trong nhóm phải dùng mật khẩu này</div>
+        </div>
+
+        <button id="saveBtn">💾 Lưu mật khẩu</button>
+
+        <div class="divider"></div>
+
+        <div class="form-group">
+            <label>📝 Công cụ mã hóa nhanh:</label>
+            <div class="encrypt-box">
+                <textarea id="textToEncrypt" placeholder="Dán tin nhắn cần mã hóa..."></textarea>
+                <button id="encryptBtn" style="margin-top: 8px;">Mã hóa</button>
+            </div>
+            <textarea id="encryptedText" readonly placeholder="Kết quả mã hóa sẽ hiện ở đây..." style="width: 100%; padding: 8px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(0,0,0,0.2); color: #fff; font-family: 'Courier New', monospace; resize: vertical; min-height: 50px; margin-bottom: 8px;"></textarea>
+            <button id="copyBtn" class="secondary-btn">📋 Copy</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="info">
+            <strong>📌 Cách sử dụng:</strong><br>
+            1️⃣ Cả nhóm nhập cùng 1 passphrase<br>
+            2️⃣ Gửi tin nhắn → extension tự mã hóa<br>
+            3️⃣ Hover vào tin nhắn để xem nội dung gốc
+        </div>
+
+        <div class="divider"></div>
+
+        <button id="clearBtn" class="secondary-btn">🗑️ Xóa mật khẩu</button>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
