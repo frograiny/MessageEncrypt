@@ -2,11 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupBtn = document.getElementById('btn-setup');
     if (setupBtn) {
         setupBtn.addEventListener('click', () => {
-            if (chrome.runtime && chrome.runtime.openOptionsPage) {
-                chrome.runtime.openOptionsPage();
-            } else {
-                window.open(chrome.runtime.getURL('src/popup.html'));
-            }
+            window.open(chrome.runtime.getURL('src/popup.html'), '_blank');
         });
     }
 
