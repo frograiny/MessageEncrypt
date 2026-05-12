@@ -31,7 +31,8 @@ class MessageCrypto {
             const encoded = btoa(encrypted);
             
             // Add marker so we can identify encrypted messages
-            return '🔐' + encoded;
+            // return '🔐' + encoded;
+            return encoded;
         } catch (error) {
             throw new Error('Encryption failed: ' + error.message);
         }
