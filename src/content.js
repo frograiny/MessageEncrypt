@@ -53,6 +53,63 @@ messageObserver.observe(document.body, {
     characterData: false
 });
 
+// ─── Shadow DOM Host ──────────────────────────────────────────────────────────
+// We mount our entire UI inside a Shadow Root so Messenger's CSS cannot touch it
+const shadowHost = document.createElement('div');
+shadowHost.id = 'msg-encrypt-host';
+Object.assign(shadowHost.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '0',
+    height: '0',
+    zIndex: '2147483647',
+    pointerEvents: 'none',
+    overflow: 'visible'
+});
+document.documentElement.appendChild(shadowHost);
+const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
+
+// Inject styles into shadow root
+const shadowStyle = document.createElement('style');
+shadowStyle.textContent = `
+    #msg-encrypt-popup {
+        position: fixed;
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        color: #fff;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 500;
+        max-width: 360px;
+        word-break: break-word;
+        z-index: 2147483647;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+        border: 1px solid rgba(255,255,255,0.15);
+        pointer-events: none;
+        line-height: 1.5;
+        animation: popIn 0.18s ease-out;
+    }
+    #msg-encrypt-popup .label {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    #msg-encrypt-popup .content {
+        font-size: 15px;
+        font-weight: 600;
+    }
+    @keyframes popIn {
+        from { opacity: 0; transform: translateY(6px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+`;
+shadowRoot.appendChild(shadowStyle);
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Add decryption tooltip to message
  */
@@ -121,11 +178,18 @@ function removeTooltip() {
  * often clears window.getSelection() before mouseup handlers run.
  */
 let lastSelectedText = '';
+let lastRawSelectedText = '';
+let lastSelectionRect = null;
 
 document.addEventListener('selectionchange', function() {
     const sel = window.getSelection();
     if (sel && sel.toString().trim()) {
         lastSelectedText = sel.toString().trim();
+        lastRawSelectedText = lastSelectedText;
+        // Grab bounding rect of selection
+        if (sel.rangeCount > 0) {
+            lastSelectionRect = sel.getRangeAt(0).getBoundingClientRect();
+        }
     }
 });
 
@@ -153,6 +217,8 @@ function handleSelection() {
 
     // Reset stored text after use so it doesn't re-trigger
     lastSelectedText = '';
+    const anchorRect = lastSelectionRect;
+    lastSelectionRect = null;
 
     try {
         const decrypted = messageCrypto.decrypt(selectedText, currentPassphrase);
@@ -160,12 +226,13 @@ function handleSelection() {
         // Copy to clipboard
         navigator.clipboard.writeText(decrypted).catch(() => {});
         
-        // Show notification with decrypted text
-        showDecryptNotification(decrypted);
+        // Show popup near selection
+        showDecryptNotification(decrypted, anchorRect);
         
     } catch (error) {
         // Nếu không giải mã được thì hiện nguyên gốc
-        showDecryptNotification(selectedText);
+        lastRawSelectedText = selectedText; // mark as raw
+        showDecryptNotification(selectedText, anchorRect);
     }
 }
 
@@ -201,38 +268,50 @@ function replaceMessageWithDecrypted(messageElement, decryptedText, encryptedTex
     }
 }
 
+let _popupTimeout = null;
+
 /**
- * Show notification when text is decrypted and copied
+ * Show decryption result popup near the selected text
  */
-function showDecryptNotification(message) {
-    removeNotification();
-    
-    const notification = document.createElement('div');
-    notification.id = 'msg-encrypt-notification';
-    notification.className = 'msg-encrypt-notification';
-    
-    const truncated = message.length > 80 ? message.substring(0, 80) + '...' : message;
-    notification.innerHTML = `
-        <strong>✅ Đã giải mã & copy:</strong><br>
-        <span>"${truncated}"</span>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        removeNotification();
+function showDecryptNotification(message, anchorRect) {
+    // Remove any existing popup from shadow root
+    const existing = shadowRoot.getElementById('msg-encrypt-popup');
+    if (existing) existing.remove();
+    if (_popupTimeout) clearTimeout(_popupTimeout);
+
+    const popup = document.createElement('div');
+    popup.id = 'msg-encrypt-popup';
+
+    const isDecrypted = message !== lastRawSelectedText;
+    const label = isDecrypted ? '🔓 Đã giải mã' : '📋 Đoạn text';
+    const truncated = message.length > 120 ? message.substring(0, 120) + '…' : message;
+
+    popup.innerHTML = `<div class="label">${label}</div><div class="content">${truncated}</div>`;
+    shadowRoot.appendChild(popup);
+
+    // Position: above the selection, or fall back to bottom-right
+    if (anchorRect) {
+        let top = anchorRect.top - popup.offsetHeight - 12;
+        let left = anchorRect.left;
+        if (top < 8) top = anchorRect.bottom + 10;
+        if (left + 360 > window.innerWidth) left = window.innerWidth - 368;
+        popup.style.top = top + 'px';
+        popup.style.left = left + 'px';
+    } else {
+        popup.style.bottom = '24px';
+        popup.style.right  = '24px';
+    }
+
+    _popupTimeout = setTimeout(() => {
+        const p = shadowRoot.getElementById('msg-encrypt-popup');
+        if (p) p.remove();
     }, 5000);
 }
 
-/**
- * Remove notification
- */
 function removeNotification() {
-    const notification = document.getElementById('msg-encrypt-notification');
-    if (notification) {
-        notification.remove();
-    }
+    const p = shadowRoot.getElementById('msg-encrypt-popup');
+    if (p) p.remove();
+    if (_popupTimeout) clearTimeout(_popupTimeout);
 }
 
 // Intercept message sending for Facebook Messenger
