@@ -59,8 +59,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
-                // Import crypto module
-                const encrypted = simpleEncrypt(text, result.passphrase);
+                // Use shared crypto module
+                const encrypted = messageCrypto.encrypt(text, result.passphrase);
                 encryptedText.value = encrypted;
                 showStatus('✅ Mã hóa thành công!', 'success');
             } catch (error) {
@@ -86,34 +86,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
     }
 });
-
-// Simple encryption function
-function simpleEncrypt(text, passphrase) {
-    // Simple XOR cipher with base64 encoding
-    let encrypted = '';
-    const phraseLength = passphrase.length;
-    
-    for (let i = 0; i < text.length; i++) {
-        const charCode = text.charCodeAt(i);
-        const phraseCharCode = passphrase.charCodeAt(i % phraseLength);
-        encrypted += String.fromCharCode(charCode ^ phraseCharCode);
-    }
-    
-    // Convert to base64
-    return btoa(encrypted).substring(0, 100) + '|' + btoa(encrypted).substring(100);
-}
-
-function simpleDecrypt(encrypted, passphrase) {
-    // Decrypt base64
-    const decrypted = atob(encrypted.replace('|', ''));
-    let text = '';
-    const phraseLength = passphrase.length;
-    
-    for (let i = 0; i < decrypted.length; i++) {
-        const charCode = decrypted.charCodeAt(i);
-        const phraseCharCode = passphrase.charCodeAt(i % phraseLength);
-        text += String.fromCharCode(charCode ^ phraseCharCode);
-    }
-    
-    return text;
-}
