@@ -8,8 +8,8 @@
     "activeTab"
   ],
   "host_permissions": [
-    "https://www.facebook.com/*",
-    "https://www.messenger.com/*"
+    "https://*.facebook.com/*",
+    "https://*.messenger.com/*"
   ],
   "background": {
     "service_worker": "src/background.js"
@@ -17,14 +17,16 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.facebook.com/*",
-        "https://www.messenger.com/*"
+        "https://*.facebook.com/*",
+        "https://*.messenger.com/*"
       ],
       "js": [
         "src/crypto.js",
         "src/content.js"
       ],
-      "css": ["src/styles.css"],
+      "css": [
+        "src/styles.css"
+      ],
       "run_at": "document_end",
       "all_frames": true
     }

@@ -104,6 +104,17 @@ function initShadowUI() {
 // ═══════════════════════════════════════════════════════════════════════════════
 let popupTimer = null;
 
+function hidePopup() {
+    if (shadowRoot) {
+        const old = shadowRoot.querySelector('.popup');
+        if (old) old.remove();
+    }
+    if (popupTimer) {
+        clearTimeout(popupTimer);
+        popupTimer = null;
+    }
+}
+
 function showPopup(text, label, rect) {
     initShadowUI();
     
@@ -161,6 +172,7 @@ setInterval(() => {
             // No active selection → reset tracker so next selection can trigger
             if (previousSelection !== '') {
                 previousSelection = '';
+                hidePopup(); // Bỏ bôi đen thì tắt popup
             }
             return;
         }

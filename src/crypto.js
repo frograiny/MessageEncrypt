@@ -17,12 +17,15 @@ class MessageCrypto {
         }
 
         try {
+            // URI encode to support Vietnamese and special characters safely
+            const safeText = encodeURIComponent(text);
+
             // XOR cipher
             let encrypted = '';
             const phraseLength = passphrase.length;
             
-            for (let i = 0; i < text.length; i++) {
-                const charCode = text.charCodeAt(i);
+            for (let i = 0; i < safeText.length; i++) {
+                const charCode = safeText.charCodeAt(i);
                 const phraseCharCode = passphrase.charCodeAt(i % phraseLength);
                 encrypted += String.fromCharCode(charCode ^ phraseCharCode);
             }
@@ -69,7 +72,13 @@ class MessageCrypto {
                 decrypted += String.fromCharCode(charCode ^ phraseCharCode);
             }
             
-            return decrypted;
+            // URI decode to restore Vietnamese and special characters
+            try {
+                return decodeURIComponent(decrypted);
+            } catch (e) {
+                // Fallback for older messages encrypted without encodeURIComponent
+                return decrypted;
+            }
         } catch (error) {
             throw new Error('Decryption failed: ' + error.message);
         }
