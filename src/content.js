@@ -111,6 +111,85 @@ function removeTooltip() {
     }
 }
 
+/**
+ * Handle text selection to decrypt selected encrypted message
+ */
+document.addEventListener('mouseup', function() {
+    handleSelection();
+});
+
+document.addEventListener('touchend', function() {
+    setTimeout(handleSelection, 100);
+});
+
+function handleSelection() {
+    if (!currentPassphrase) {
+        return;
+    }
+
+    const selectedText = window.getSelection().toString().trim();
+    
+    if (!selectedText) {
+        return;
+    }
+
+    // Check if selection contains encrypted marker
+    if (messageCrypto.isEncrypted(selectedText)) {
+        try {
+            const decrypted = messageCrypto.decrypt(selectedText, currentPassphrase);
+            
+            // Copy decrypted text to clipboard
+            navigator.clipboard.writeText(decrypted).then(() => {
+                // Show toast notification
+                showDecryptNotification(decrypted);
+            }).catch(() => {
+                // Fallback: show tooltip
+                const event = { target: document.elementFromPoint(
+                    window.innerWidth / 2, 
+                    window.innerHeight / 2
+                )};
+                showTooltip(event, decrypted);
+            });
+        } catch (error) {
+            console.error('Decrypt error:', error);
+        }
+    }
+}
+
+/**
+ * Show notification when text is decrypted and copied
+ */
+function showDecryptNotification(message) {
+    removeNotification();
+    
+    const notification = document.createElement('div');
+    notification.id = 'msg-encrypt-notification';
+    notification.className = 'msg-encrypt-notification';
+    
+    const truncated = message.length > 100 ? message.substring(0, 100) + '...' : message;
+    notification.innerHTML = `
+        ✅ Đã copy vào clipboard:<br>
+        <span style="font-weight: bold;">"${truncated}"</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        removeNotification();
+    }, 3000);
+}
+
+/**
+ * Remove notification
+ */
+function removeNotification() {
+    const notification = document.getElementById('msg-encrypt-notification');
+    if (notification) {
+        notification.remove();
+    }
+}
+
 // Intercept message sending for Facebook Messenger
 setupMessageEncryption();
 
