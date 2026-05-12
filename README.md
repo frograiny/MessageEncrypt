@@ -1,151 +1,108 @@
-# 🔐 Message Encrypt Extension
+<div align="center">
+  <img src="https://raw.githubusercontent.com/frograiny/MessageEncrypt/main/src/icons/icon-128.png" width="128" alt="Message Encrypt Logo">
+  <h1>🔐 Message Encrypt Extension</h1>
+  <p><em>Secure your Messenger & Facebook conversations with client-side encryption</em></p>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-success.svg)](#)
+  [![Browser](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-orange.svg)](#)
+</div>
 
-Một extension Chrome/Edge bảo vệ tin nhắn Messenger của bạn khỏi admin leak bằng mã hóa!
+<hr>
 
-## 🎯 Tính năng
+## 🛡️ Giới thiệu (Overview)
 
-✅ **Mã hóa tin nhắn** - Tin nhắn được mã hóa trước khi gửi  
-✅ **Giải mã bằng hover** - Trỏ chuột vào tin nhắn để xem nội dung gốc (tooltip)  
-✅ **Passphrase chia sẻ** - Tất cả mọi người dùng cùng mật khẩu  
-✅ **Phím tắt** - Ctrl+Shift+E để mã hóa nhanh  
-✅ **An toàn** - Admin không thể đọc được tin nhắn mã hóa  
-
-## 📦 Cài đặt
-
-### 1. Clone hoặc tải về extension
-```bash
-# Nếu dùng git
-git clone <repo-url>
-cd MessageEncrypt
-```
-
-### 2. Cài đặt trên Chrome/Edge
-
-**Chrome:**
-1. Mở `chrome://extensions/`
-2. Bật "Developer mode" (góc phải trên)
-3. Nhấn "Load unpacked"
-4. Chọn thư mục `MessageEncrypt`
-5. Xong! Extension sẽ được cài đặt
-
-**Edge:**
-1. Mở `edge://extensions/`
-2. Bật "Developer mode" (góc trái dưới)
-3. Nhấn "Load unpacked"
-4. Chọn thư mục `MessageEncrypt`
-5. Xong!
-
-## 🚀 Hướng dẫn sử dụng
-
-### Bước 1: Lưu Passphrase
-1. Click biểu tượng 🔐 extension ở góc phải trên
-2. Nhập mật khẩu **chung cho cả nhóm** (ví dụ: "group123456")
-3. Nhấn "💾 Lưu mật khẩu"
-4. Tất cả mọi người phải lưu **cùng** passphrase này
-
-### Bước 2: Mã hóa tin nhắn
-1. Vào Messenger, gõ tin nhắn bình thường
-2. **Cách 1:** Click nút 🔐 bên cạnh nút gửi
-3. **Cách 2:** Nhấn `Ctrl+Shift+E` (hoặc `Cmd+Shift+E` trên Mac)
-4. Tin nhắn sẽ được mã hóa thành ký tự lộn xộn
-5. Nhấn "Gửi" như bình thường
-
-### Bước 3: Xem tin nhắn mã hóa
-1. Hover chuột vào tin nhắn đã mã hóa (bắt đầu bằng 🔐)
-2. Một **tooltip** sẽ hiển thị tin nhắn gốc
-3. Chỉ những ai có cùng passphrase mới xem được
-
-## 💡 Ví dụ
-
-**Trước mã hóa:**
-```
-"Hôm nay mình không vào văn phòng nhé"
-```
-
-**Sau mã hóa (gửi trên Messenger):**
-```
-🔐aB3XYz9mK2pQrStUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIj
-```
-
-**Hover vào tin nhắn → Tooltip:**
-```
-┌─────────────────────────────────────┐
-│ "Hôm nay mình không vào văn phòng   │
-│ nhé"                                │
-└─────────────────────────────────────┘
-```
-
-## ⚙️ Công cụ nhanh (Encryption Tool)
-
-Extension có công cụ mã hóa nhanh trong popup:
-1. Click biểu tượng 🔐
-2. Dán text cần mã hóa vào ô "📝 Công cụ mã hóa nhanh"
-3. Nhấn "Mã hóa"
-4. Copy text mã hóa bằng "📋 Copy"
-5. Dán vào Messenger theo cách thủ công
-
-## 🔒 An niệm bảo mật
-
-- Extension dùng XOR cipher + Base64 encoding (đủ an toàn cho tin nhắn casual)
-- Passphrase được lưu trong `chrome.storage.local` (local device only)
-- Không có dữ liệu gửi đến server nào
-- Chỉ ai có passphrase mới giải mã được
-
-## ⚠️ Lưu ý quan trọng
-
-1. **Passphrase phải giống nhau** - Nếu ai nhập sai, sẽ không giải mã được
-2. **Tất cả phải cài extension** - Nếu ai không có extension, họ chỉ thấy ký tự lộn xộn
-3. **Không lưu passphrase đâu** - Hãy nhớ passphrase hoặc lưu ở chỗ an toàn
-4. **Admin vẫn có thể thấy** - Nhưng chỉ thấy ký tự lộn xộn, không đọc được nội dung
-
-## 🐛 Troubleshooting
-
-### "Không thể giải mã (sai passphrase?)"
-- Kiểm tra passphrase có giống với những người khác không
-- Thử xóa passphrase và lưu lại
-
-### Nút 🔐 không hiện
-- Refresh lại trang Messenger
-- Đảm bảo extension đã được cài đặt (check chrome://extensions)
-
-### Tooltip không hiện khi hover
-- Kiểm tra passphrase có được lưu không
-- Refresh trang Messenger
-
-### Tin nhắn không mã hóa khi gửi
-- Kiểm tra passphrase có được lưu không (sẽ báo lỗi)
-- Xác nhận bạn đã bấm nút 🔐 hoặc Ctrl+Shift+E
-
-## 📝 Phát triển
-
-Cấu trúc dự án:
-```
-MessageEncrypt/
-├── manifest.json           # Cài đặt extension
-├── src/
-│   ├── popup.html         # UI popup passphrase
-│   ├── popup.js           # Logic popup
-│   ├── content.js         # Script chạy trên Messenger
-│   ├── crypto.js          # Hàm mã hóa/giải mã
-│   ├── background.js      # Service worker
-│   ├── styles.css         # Styling
-│   ├── onboarding.html    # Trang hướng dẫn
-│   └── icons/             # Icons (16x16, 48x48, 128x128)
-└── README.md              # File này
-```
-
-## 🤝 Đóng góp
-
-Nếu bạn có ý tưởng cải tiến hoặc tìm thấy bug, hãy tạo issue hoặc pull request!
-
-## 📄 License
-
-MIT License - Dùng tự do!
-
-## ⭐ Ủng hộ
-
-Nếu thấy hữu ích, hãy ⭐ star dự án này!
+**Message Encrypt** là một tiện ích mở rộng (extension) cho Chrome/Edge giúp bạn bảo vệ sự riêng tư của tin nhắn trên nền tảng Messenger. Extension áp dụng mã hóa ngay trên trình duyệt của bạn (client-side encryption), đảm bảo rằng không ai (ngay cả quản trị viên hệ thống mạng) có thể đọc được nội dung tin nhắn nếu không có chung Passphrase.
 
 ---
 
-**Made with 💜 for privacy lovers**
+## ✨ Tính năng nổi bật (Features)
+
+- 🔒 **Mã hóa Client-side:** Tin nhắn được mã hóa thành các chuỗi ký tự an toàn trước khi rời khỏi trình duyệt.
+- 🖱️ **Giải mã thông minh:** Tự động giải mã và hiển thị nội dung gốc thông qua `tooltip` khi di chuột (hover) vào tin nhắn đã mã hóa.
+- ⌨️ **Phím tắt nhanh:** Sử dụng tổ hợp phím `Ctrl + Shift + E` (`Cmd + Shift + E` trên Mac) để mã hóa nội dung ngay trong khung chat.
+- 🔑 **Passphrase đồng bộ:** Sử dụng chung một mật khẩu (Passphrase) cho cả nhóm để đảm bảo tính thống nhất và tiện lợi.
+- 📝 **Tự động nhận diện (Mới!):** Hỗ trợ giải mã bằng cách bôi đen văn bản ngay cả khi tin nhắn bị mất định dạng biểu tượng bảo mật.
+- ⚡ **Nhẹ & Nhanh:** Không lưu trữ dữ liệu người dùng lên server bên ngoài, đảm bảo an toàn tuyệt đối.
+
+---
+
+## 🚀 Hướng dẫn cài đặt (Installation)
+
+### 1. Tải mã nguồn
+Clone dự án từ GitHub hoặc tải file `.zip` và giải nén:
+```bash
+git clone https://github.com/frograiny/MessageEncrypt.git
+cd MessageEncrypt
+```
+
+### 2. Cài đặt trên trình duyệt
+
+**Google Chrome / Brave:**
+1. Mở trình duyệt và truy cập: `chrome://extensions/`
+2. Bật chế độ **Developer mode (Chế độ dành cho nhà phát triển)** ở góc trên bên phải.
+3. Nhấp vào nút **Load unpacked (Tải tiện ích đã giải nén)**.
+4. Chọn thư mục `MessageEncrypt` vừa tải về.
+
+**Microsoft Edge:**
+1. Truy cập: `edge://extensions/`
+2. Bật **Developer mode** ở thanh menu bên trái.
+3. Chọn **Load unpacked** và trỏ đến thư mục `MessageEncrypt`.
+
+---
+
+## 📖 Hướng dẫn sử dụng (Usage)
+
+### Bước 1: Thiết lập Mật khẩu (Passphrase)
+1. Click vào biểu tượng 🔐 của extension trên thanh công cụ trình duyệt.
+2. Nhập mật khẩu chung bạn muốn sử dụng cùng bạn bè (VD: `SuperSecret123`).
+3. Nhấp **"💾 Lưu mật khẩu"**. *(Tất cả người tham gia cuộc trò chuyện đều phải lưu cùng một mật khẩu này).*
+
+### Bước 2: Mã hóa & Gửi tin nhắn
+1. Gõ tin nhắn vào khung chat Messenger như bình thường.
+2. **Cách 1:** Click vào nút 🔐 xuất hiện cạnh nút gửi (Send).
+3. **Cách 2:** Bấm tổ hợp phím `Ctrl + Shift + E`.
+4. Tin nhắn của bạn sẽ tự động chuyển thành chuỗi mã hóa an toàn.
+5. Nhấn "Gửi" để truyền tin nhắn đi.
+
+### Bước 3: Xem và Giải mã
+- **Tự động (Hover):** Đưa con trỏ chuột (hover) vào đoạn tin nhắn mã hóa (có biểu tượng 🔐), một tooltip sẽ hiện lên chứa nội dung gốc.
+- **Thủ công (Highlight):** Nếu tin nhắn bị mất biểu tượng ổ khóa, chỉ cần **bôi đen (highlight)** đoạn mã Base64, extension sẽ tự động giải mã, copy vào khay nhớ tạm (Clipboard) và hiển thị thông báo.
+
+---
+
+## 🛠️ Công cụ tiện ích (Utility Tool)
+
+Nếu bạn không muốn sử dụng phím tắt hoặc tính năng tự động tích hợp, extension cung cấp một bảng điều khiển mã hóa trực tiếp:
+1. Mở popup extension 🔐.
+2. Dán/nhập văn bản cần xử lý vào ô **"📝 Công cụ mã hóa nhanh"**.
+3. Nhấn nút **Mã hóa**, sau đó dùng nút **📋 Copy** để dán tay vào Messenger.
+
+---
+
+## 🔐 Cơ chế bảo mật (Security Architecture)
+
+- **Thuật toán:** Sử dụng XOR cipher kết hợp Base64 encoding. Tuy không phải chuẩn mã hóa quân sự (như AES-256), nhưng hoàn toàn đủ mạnh mẽ để chống lại các công cụ quét tự động và quản trị viên xem trộm ở cấp độ ứng dụng.
+- **Lưu trữ:** Passphrase được lưu an toàn tại `chrome.storage.local` - Không có bất kỳ dữ liệu nào được truyền ra ngoài thiết bị của bạn.
+- **Quyền hạn:** Extension chỉ yêu cầu quyền truy cập vào `facebook.com` và `messenger.com` để xử lý DOM elements, không đọc dữ liệu từ các trang web khác.
+
+---
+
+## 🤝 Đóng góp (Contributing)
+
+Dự án này là mã nguồn mở. Chúng tôi hoan nghênh mọi đóng góp để làm cho extension tốt hơn!
+1. Fork dự án
+2. Tạo Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit các thay đổi (`git commit -m 'Add some AmazingFeature'`)
+4. Push lên Branch (`git push origin feature/AmazingFeature`)
+5. Mở một Pull Request
+
+---
+
+## 📄 Giấy phép (License)
+
+Phân phối dưới giấy phép **MIT License**. Vui lòng xem file `LICENSE` (nếu có) để biết thêm chi tiết.
+
+<div align="center">
+  <p><b>Made with 💜 for privacy lovers</b></p>
+</div>

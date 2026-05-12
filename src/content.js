@@ -152,33 +152,53 @@ function handleSelection() {
     // Traverse up to find message container
     const encryptedElement = messageElement.closest('[data-encrypted="true"]');
     
-    if (!encryptedElement) {
-        return;
+    let textToDecrypt = null;
+    let isDirectSelection = false;
+
+    if (encryptedElement) {
+        textToDecrypt = encryptedElement.getAttribute('data-encrypted-text');
+    } else {
+        // If not in a marked element, maybe they selected a raw base64 string or marker is missing
+        textToDecrypt = selectedText;
+        isDirectSelection = true;
     }
 
-    const encryptedText = encryptedElement.getAttribute('data-encrypted-text');
-    
-    if (!encryptedText) {
+    if (!textToDecrypt) {
         return;
     }
 
     try {
-        const decrypted = messageCrypto.decrypt(encryptedText, currentPassphrase);
+        // Only proceed for direct selection if it looks like base64 or has our marker
+        // to avoid ruining normal text selections.
+        if (isDirectSelection) {
+            const hasMarker = textToDecrypt.startsWith('🔐');
+            const isBase64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(textToDecrypt);
+            
+            if (!hasMarker && (!isBase64 || textToDecrypt.length < 8)) {
+                return; // Ignore normal text selections
+            }
+        }
+
+        const decrypted = messageCrypto.decrypt(textToDecrypt, currentPassphrase);
         
-        // Option 1: Replace text content with decrypted (temporary toggle)
-        replaceMessageWithDecrypted(encryptedElement, decrypted, encryptedText);
+        if (encryptedElement) {
+            // Option 1: Replace text content with decrypted (temporary toggle)
+            replaceMessageWithDecrypted(encryptedElement, decrypted, textToDecrypt);
+        }
         
         // Copy to clipboard
         navigator.clipboard.writeText(decrypted).then(() => {
             showDecryptNotification(decrypted);
         }).catch(() => {
             console.log('Copy failed, showing tooltip instead');
+            showDecryptNotification(decrypted);
         });
         
         // Clear selection
         window.getSelection().removeAllRanges();
     } catch (error) {
         console.error('Decrypt error:', error);
+        // Don't show error for direct selection to avoid spamming on normal text that happens to be base64-like
     }
 }
 
