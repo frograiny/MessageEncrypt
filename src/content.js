@@ -117,13 +117,25 @@ function removeTooltip() {
 
 /**
  * Handle text selection to decrypt selected encrypted message
+ * We store the selection text on selectionchange because Messenger
+ * often clears window.getSelection() before mouseup handlers run.
  */
+let lastSelectedText = '';
+
+document.addEventListener('selectionchange', function() {
+    const sel = window.getSelection();
+    if (sel && sel.toString().trim()) {
+        lastSelectedText = sel.toString().trim();
+    }
+});
+
 document.addEventListener('mouseup', function() {
-    setTimeout(handleSelection, 100);
+    // Small delay to let selectionchange fire first
+    setTimeout(handleSelection, 150);
 }, true);
 
 document.addEventListener('touchend', function() {
-    setTimeout(handleSelection, 100);
+    setTimeout(handleSelection, 200);
 }, true);
 
 function handleSelection() {
@@ -131,11 +143,16 @@ function handleSelection() {
         return;
     }
 
-    const selectedText = window.getSelection().toString().trim();
-    
+    // Try live selection first, fall back to stored value
+    const liveText = window.getSelection()?.toString().trim();
+    const selectedText = (liveText && liveText.length > 0) ? liveText : lastSelectedText;
+
     if (!selectedText) {
         return;
     }
+
+    // Reset stored text after use so it doesn't re-trigger
+    lastSelectedText = '';
 
     try {
         const decrypted = messageCrypto.decrypt(selectedText, currentPassphrase);
@@ -147,7 +164,7 @@ function handleSelection() {
         showDecryptNotification(decrypted);
         
     } catch (error) {
-        // Nếu không giải mã được (ví dụ bôi đen text thường), thì hiện nguyên gốc
+        // Nếu không giải mã được thì hiện nguyên gốc
         showDecryptNotification(selectedText);
     }
 }
