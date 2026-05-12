@@ -119,12 +119,12 @@ function removeTooltip() {
  * Handle text selection to decrypt selected encrypted message
  */
 document.addEventListener('mouseup', function() {
-    handleSelection();
-});
+    setTimeout(handleSelection, 100);
+}, true);
 
 document.addEventListener('touchend', function() {
     setTimeout(handleSelection, 100);
-});
+}, true);
 
 function handleSelection() {
     if (!currentPassphrase) {
@@ -146,8 +146,6 @@ function handleSelection() {
         // Show notification with decrypted text
         showDecryptNotification(decrypted);
         
-        // Clear selection
-        window.getSelection().removeAllRanges();
     } catch (error) {
         // Nếu không giải mã được (ví dụ bôi đen text thường), thì hiện nguyên gốc
         showDecryptNotification(selectedText);

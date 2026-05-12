@@ -79,7 +79,7 @@
     border-radius: 8px;
     font-size: 13px;
     max-width: 400px;
-    z-index: 10001;
+    z-index: 2147483647;
     box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
     animation: notificationSlideIn 0.3s ease-out, notificationSlideOut 0.3s ease-in 4.7s forwards;
