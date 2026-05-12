@@ -63,6 +63,10 @@ function addDecryptTooltip(messageElement, encryptedText) {
 
     messageElement.style.cursor = 'help';
     
+    // Store encrypted text for selection decryption
+    messageElement.setAttribute('data-encrypted-text', encryptedText);
+    messageElement.setAttribute('data-encrypted', 'true');
+    
     messageElement.addEventListener('mouseenter', function(e) {
         try {
             const decrypted = messageCrypto.decrypt(encryptedText, currentPassphrase);
@@ -133,26 +137,80 @@ function handleSelection() {
         return;
     }
 
-    // Check if selection contains encrypted marker
-    if (messageCrypto.isEncrypted(selectedText)) {
-        try {
-            const decrypted = messageCrypto.decrypt(selectedText, currentPassphrase);
-            
-            // Copy decrypted text to clipboard
-            navigator.clipboard.writeText(decrypted).then(() => {
-                // Show toast notification
-                showDecryptNotification(decrypted);
-            }).catch(() => {
-                // Fallback: show tooltip
-                const event = { target: document.elementFromPoint(
-                    window.innerWidth / 2, 
-                    window.innerHeight / 2
-                )};
-                showTooltip(event, decrypted);
-            });
-        } catch (error) {
-            console.error('Decrypt error:', error);
-        }
+    // Find the closest encrypted message element
+    const selection = window.getSelection();
+    if (selection.rangeCount === 0) {
+        return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const messageElement = container.nodeType === 3 
+        ? container.parentElement 
+        : container;
+    
+    // Traverse up to find message container
+    const encryptedElement = messageElement.closest('[data-encrypted="true"]');
+    
+    if (!encryptedElement) {
+        return;
+    }
+
+    const encryptedText = encryptedElement.getAttribute('data-encrypted-text');
+    
+    if (!encryptedText) {
+        return;
+    }
+
+    try {
+        const decrypted = messageCrypto.decrypt(encryptedText, currentPassphrase);
+        
+        // Option 1: Replace text content with decrypted (temporary toggle)
+        replaceMessageWithDecrypted(encryptedElement, decrypted, encryptedText);
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(decrypted).then(() => {
+            showDecryptNotification(decrypted);
+        }).catch(() => {
+            console.log('Copy failed, showing tooltip instead');
+        });
+        
+        // Clear selection
+        window.getSelection().removeAllRanges();
+    } catch (error) {
+        console.error('Decrypt error:', error);
+    }
+}
+
+/**
+ * Replace message with decrypted text or toggle back
+ */
+function replaceMessageWithDecrypted(messageElement, decryptedText, encryptedText) {
+    const textContainer = messageElement.querySelector('[dir="auto"]') || messageElement;
+    const isCurrentlyDecrypted = textContainer.getAttribute('data-is-decrypted') === 'true';
+    
+    if (isCurrentlyDecrypted) {
+        // Toggle back to encrypted
+        textContainer.textContent = encryptedText;
+        textContainer.setAttribute('data-is-decrypted', 'false');
+        console.log('🔐 Toggled back to encrypted');
+    } else {
+        // Show decrypted
+        textContainer.textContent = decryptedText;
+        textContainer.setAttribute('data-is-decrypted', 'true');
+        
+        // Add visual indicator
+        messageElement.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+        
+        // Auto toggle back after 5 seconds
+        setTimeout(() => {
+            textContainer.textContent = encryptedText;
+            textContainer.setAttribute('data-is-decrypted', 'false');
+            messageElement.style.backgroundColor = '';
+            console.log('⏱️ Auto toggled back to encrypted');
+        }, 5000);
+        
+        console.log('✅ Decrypted: ' + decryptedText.substring(0, 50) + '...');
     }
 }
 
@@ -166,18 +224,18 @@ function showDecryptNotification(message) {
     notification.id = 'msg-encrypt-notification';
     notification.className = 'msg-encrypt-notification';
     
-    const truncated = message.length > 100 ? message.substring(0, 100) + '...' : message;
+    const truncated = message.length > 80 ? message.substring(0, 80) + '...' : message;
     notification.innerHTML = `
-        ✅ Đã copy vào clipboard:<br>
-        <span style="font-weight: bold;">"${truncated}"</span>
+        <strong>✅ Đã giải mã & copy:</strong><br>
+        <span>"${truncated}"</span>
     `;
     
     document.body.appendChild(notification);
     
-    // Auto remove after 3 seconds
+    // Auto remove after 5 seconds
     setTimeout(() => {
         removeNotification();
-    }, 3000);
+    }, 5000);
 }
 
 /**
