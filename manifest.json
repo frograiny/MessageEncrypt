@@ -25,7 +25,8 @@
         "src/content.js"
       ],
       "css": ["src/styles.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "action": {

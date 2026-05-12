@@ -1,362 +1,225 @@
 // Content script for Messenger encryption
+// ═══════════════════════════════════════════════════════════════════════════════
 
-console.log('🔐 Message Encrypt extension loaded');
+console.log('🔐 [MsgEncrypt] Content script loaded on:', window.location.href);
 
+// ─── State ────────────────────────────────────────────────────────────────────
 let currentPassphrase = null;
+let previousSelection = '';   // tracks last processed selection to avoid duplicates
 
-// Load passphrase from storage
+// ─── Load passphrase from storage ─────────────────────────────────────────────
 chrome.storage.local.get(['passphrase'], (result) => {
     if (result.passphrase) {
         currentPassphrase = result.passphrase;
-        console.log('✅ Passphrase loaded');
+        console.log('🔐 [MsgEncrypt] Passphrase loaded ✅');
+    } else {
+        console.log('🔐 [MsgEncrypt] No passphrase saved yet');
     }
 });
 
-// Listen for passphrase changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local' && changes.passphrase) {
         currentPassphrase = changes.passphrase.newValue;
-        console.log('🔄 Passphrase updated');
+        console.log('🔐 [MsgEncrypt] Passphrase updated ✅');
     }
 });
 
-// Observer to detect new messages
-const messageObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        // Look for message elements
-        const messageElements = document.querySelectorAll('[role="article"], [data-testid*="message"]');
-        
-        messageElements.forEach((el) => {
-            // Check if already processed
-            if (el.getAttribute('data-encrypt-processed')) {
-                return;
-            }
+// ═══════════════════════════════════════════════════════════════════════════════
+// POPUP UI - Shadow DOM (completely isolated from Messenger CSS)
+// ═══════════════════════════════════════════════════════════════════════════════
+let shadowHost, shadowRoot;
 
-            el.setAttribute('data-encrypt-processed', 'true');
-            
-            // Find text content in message
-            const textElement = el.querySelector('[dir="auto"]') || el;
-            const originalText = textElement?.textContent?.trim();
-
-            if (originalText && messageCrypto.isEncrypted(originalText)) {
-                // Add hover tooltip for encrypted messages
-                addDecryptTooltip(el, originalText);
-            }
-        });
-    });
-});
-
-// Start observing
-messageObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-    characterData: false
-});
-
-// ─── Shadow DOM Host ──────────────────────────────────────────────────────────
-// We mount our entire UI inside a Shadow Root so Messenger's CSS cannot touch it
-const shadowHost = document.createElement('div');
-shadowHost.id = 'msg-encrypt-host';
-Object.assign(shadowHost.style, {
-    position: 'fixed',
-    top: '0',
-    left: '0',
-    width: '0',
-    height: '0',
-    zIndex: '2147483647',
-    pointerEvents: 'none',
-    overflow: 'visible'
-});
-document.documentElement.appendChild(shadowHost);
-const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
-
-// Inject styles into shadow root
-const shadowStyle = document.createElement('style');
-shadowStyle.textContent = `
-    #msg-encrypt-popup {
-        position: fixed;
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-        color: #fff;
-        padding: 12px 18px;
-        border-radius: 10px;
-        font-size: 14px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-weight: 500;
-        max-width: 360px;
-        word-break: break-word;
-        z-index: 2147483647;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.45);
-        border: 1px solid rgba(255,255,255,0.15);
-        pointer-events: none;
-        line-height: 1.5;
-        animation: popIn 0.18s ease-out;
-    }
-    #msg-encrypt-popup .label {
-        font-size: 11px;
-        opacity: 0.7;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    #msg-encrypt-popup .content {
-        font-size: 15px;
-        font-weight: 600;
-    }
-    @keyframes popIn {
-        from { opacity: 0; transform: translateY(6px) scale(0.97); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-`;
-shadowRoot.appendChild(shadowStyle);
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Add decryption tooltip to message
- */
-function addDecryptTooltip(messageElement, encryptedText) {
-    if (!currentPassphrase) {
-        return;
-    }
-
-    messageElement.style.cursor = 'help';
+function initShadowUI() {
+    if (shadowHost) return; // already initialized
     
-    // Store encrypted text for selection decryption
-    messageElement.setAttribute('data-encrypted-text', encryptedText);
-    messageElement.setAttribute('data-encrypted', 'true');
+    shadowHost = document.createElement('msg-encrypt-host');
+    shadowHost.setAttribute('style',
+        'position:fixed !important;' +
+        'top:0 !important;' +
+        'left:0 !important;' +
+        'width:0 !important;' +
+        'height:0 !important;' +
+        'z-index:2147483647 !important;' +
+        'pointer-events:none !important;' +
+        'overflow:visible !important;' +
+        'display:block !important;' +
+        'opacity:1 !important;' +
+        'visibility:visible !important;'
+    );
     
-    messageElement.addEventListener('mouseenter', function(e) {
-        try {
-            const decrypted = messageCrypto.decrypt(encryptedText, currentPassphrase);
-            showTooltip(e, decrypted);
-        } catch (error) {
-            showTooltip(e, '❌ Không thể giải mã (sai passphrase?)');
+    // Use a custom element name to avoid any clash
+    document.documentElement.appendChild(shadowHost);
+    shadowRoot = shadowHost.attachShadow({ mode: 'closed' });
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        :host {
+            all: initial !important;
         }
-    });
-
-    messageElement.addEventListener('mouseleave', function() {
-        removeTooltip();
-    });
-}
-
-/**
- * Show tooltip with decrypted message
- */
-function showTooltip(event, message) {
-    removeTooltip();
-
-    const tooltip = document.createElement('div');
-    tooltip.id = 'msg-encrypt-tooltip';
-    tooltip.className = 'msg-encrypt-tooltip';
-    tooltip.textContent = message;
-    
-    document.body.appendChild(tooltip);
-
-    // Position tooltip
-    const rect = event.target.getBoundingClientRect();
-    tooltip.style.left = rect.left + 'px';
-    tooltip.style.top = (rect.top - tooltip.offsetHeight - 10) + 'px';
-
-    // Adjust if tooltip goes off screen
-    if (tooltip.offsetTop < 0) {
-        tooltip.style.top = (rect.bottom + 10) + 'px';
-    }
-}
-
-/**
- * Remove tooltip
- */
-function removeTooltip() {
-    const tooltip = document.getElementById('msg-encrypt-tooltip');
-    if (tooltip) {
-        tooltip.remove();
-    }
-}
-
-/**
- * Handle text selection to decrypt selected encrypted message
- * We store the selection text on selectionchange because Messenger
- * often clears window.getSelection() before mouseup handlers run.
- */
-let lastSelectedText = '';
-let lastRawSelectedText = '';
-let lastSelectionRect = null;
-
-document.addEventListener('selectionchange', function() {
-    const sel = window.getSelection();
-    if (sel && sel.toString().trim()) {
-        lastSelectedText = sel.toString().trim();
-        lastRawSelectedText = lastSelectedText;
-        // Grab bounding rect of selection
-        if (sel.rangeCount > 0) {
-            lastSelectionRect = sel.getRangeAt(0).getBoundingClientRect();
+        .popup {
+            position: fixed !important;
+            background: #1a1a2e !important;
+            color: #ffffff !important;
+            padding: 14px 18px !important;
+            border-radius: 12px !important;
+            font-size: 14px !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-weight: 500 !important;
+            max-width: 400px !important;
+            min-width: 120px !important;
+            word-break: break-word !important;
+            z-index: 2147483647 !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) !important;
+            pointer-events: none !important;
+            line-height: 1.6 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            animation: slideUp 0.2s ease-out !important;
         }
-    }
-});
-
-document.addEventListener('mouseup', function() {
-    // Small delay to let selectionchange fire first
-    setTimeout(handleSelection, 150);
-}, true);
-
-document.addEventListener('touchend', function() {
-    setTimeout(handleSelection, 200);
-}, true);
-
-function handleSelection() {
-    if (!currentPassphrase) {
-        return;
-    }
-
-    // Try live selection first, fall back to stored value
-    const liveText = window.getSelection()?.toString().trim();
-    const selectedText = (liveText && liveText.length > 0) ? liveText : lastSelectedText;
-
-    if (!selectedText) {
-        return;
-    }
-
-    // Reset stored text after use so it doesn't re-trigger
-    lastSelectedText = '';
-    const anchorRect = lastSelectionRect;
-    lastSelectionRect = null;
-
-    try {
-        const decrypted = messageCrypto.decrypt(selectedText, currentPassphrase);
-        
-        // Copy to clipboard
-        navigator.clipboard.writeText(decrypted).catch(() => {});
-        
-        // Show popup near selection
-        showDecryptNotification(decrypted, anchorRect);
-        
-    } catch (error) {
-        // Nếu không giải mã được thì hiện nguyên gốc
-        lastRawSelectedText = selectedText; // mark as raw
-        showDecryptNotification(selectedText, anchorRect);
-    }
+        .popup .lbl {
+            font-size: 10px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.1em !important;
+            opacity: 0.6 !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+        }
+        .popup .msg {
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            display: block !important;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    shadowRoot.appendChild(style);
+    console.log('🔐 [MsgEncrypt] Shadow DOM UI initialized ✅');
 }
 
-/**
- * Replace message with decrypted text or toggle back
- */
-function replaceMessageWithDecrypted(messageElement, decryptedText, encryptedText) {
-    const textContainer = messageElement.querySelector('[dir="auto"]') || messageElement;
-    const isCurrentlyDecrypted = textContainer.getAttribute('data-is-decrypted') === 'true';
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHOW / HIDE POPUP
+// ═══════════════════════════════════════════════════════════════════════════════
+let popupTimer = null;
+
+function showPopup(text, label, rect) {
+    initShadowUI();
     
-    if (isCurrentlyDecrypted) {
-        // Toggle back to encrypted
-        textContainer.textContent = encryptedText;
-        textContainer.setAttribute('data-is-decrypted', 'false');
-        console.log('🔐 Toggled back to encrypted');
+    // Remove existing
+    const old = shadowRoot.querySelector('.popup');
+    if (old) old.remove();
+    if (popupTimer) clearTimeout(popupTimer);
+    
+    const el = document.createElement('div');
+    el.className = 'popup';
+    
+    const truncated = text.length > 150 ? text.substring(0, 150) + '…' : text;
+    el.innerHTML = `<span class="lbl">${label}</span><span class="msg">${escapeHtml(truncated)}</span>`;
+    shadowRoot.appendChild(el);
+    
+    // Position near the selection
+    if (rect && rect.width > 0) {
+        let top = rect.top - el.offsetHeight - 10;
+        let left = rect.left;
+        if (top < 10) top = rect.bottom + 10;
+        if (left + 400 > window.innerWidth) left = window.innerWidth - 410;
+        if (left < 10) left = 10;
+        el.style.top = top + 'px';
+        el.style.left = left + 'px';
     } else {
-        // Show decrypted
-        textContainer.textContent = decryptedText;
-        textContainer.setAttribute('data-is-decrypted', 'true');
-        
-        // Add visual indicator
-        messageElement.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
-        
-        // Auto toggle back after 5 seconds
-        setTimeout(() => {
-            textContainer.textContent = encryptedText;
-            textContainer.setAttribute('data-is-decrypted', 'false');
-            messageElement.style.backgroundColor = '';
-            console.log('⏱️ Auto toggled back to encrypted');
-        }, 5000);
-        
-        console.log('✅ Decrypted: ' + decryptedText.substring(0, 50) + '...');
+        el.style.bottom = '20px';
+        el.style.right = '20px';
     }
-}
-
-let _popupTimeout = null;
-
-/**
- * Show decryption result popup near the selected text
- */
-function showDecryptNotification(message, anchorRect) {
-    // Remove any existing popup from shadow root
-    const existing = shadowRoot.getElementById('msg-encrypt-popup');
-    if (existing) existing.remove();
-    if (_popupTimeout) clearTimeout(_popupTimeout);
-
-    const popup = document.createElement('div');
-    popup.id = 'msg-encrypt-popup';
-
-    const isDecrypted = message !== lastRawSelectedText;
-    const label = isDecrypted ? '🔓 Đã giải mã' : '📋 Đoạn text';
-    const truncated = message.length > 120 ? message.substring(0, 120) + '…' : message;
-
-    popup.innerHTML = `<div class="label">${label}</div><div class="content">${truncated}</div>`;
-    shadowRoot.appendChild(popup);
-
-    // Position: above the selection, or fall back to bottom-right
-    if (anchorRect) {
-        let top = anchorRect.top - popup.offsetHeight - 12;
-        let left = anchorRect.left;
-        if (top < 8) top = anchorRect.bottom + 10;
-        if (left + 360 > window.innerWidth) left = window.innerWidth - 368;
-        popup.style.top = top + 'px';
-        popup.style.left = left + 'px';
-    } else {
-        popup.style.bottom = '24px';
-        popup.style.right  = '24px';
-    }
-
-    _popupTimeout = setTimeout(() => {
-        const p = shadowRoot.getElementById('msg-encrypt-popup');
+    
+    console.log('🔐 [MsgEncrypt] Popup shown:', truncated);
+    
+    // Auto-remove after 6 seconds
+    popupTimer = setTimeout(() => {
+        const p = shadowRoot.querySelector('.popup');
         if (p) p.remove();
-    }, 5000);
+    }, 6000);
 }
 
-function removeNotification() {
-    const p = shadowRoot.getElementById('msg-encrypt-popup');
-    if (p) p.remove();
-    if (_popupTimeout) clearTimeout(_popupTimeout);
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
-// Intercept message sending for Facebook Messenger
-setupMessageEncryption();
+// ═══════════════════════════════════════════════════════════════════════════════
+// SELECTION POLLING — the core mechanism
+// This bypasses ALL event interception by Messenger.
+// We simply check window.getSelection() every 300ms.
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function setupMessageEncryption() {
-    // Wait for Messenger to load
-    const checkInterval = setInterval(() => {
-        const messageInput = document.querySelector('[contenteditable="true"]');
-        
-        if (messageInput) {
-            clearInterval(checkInterval);
-            
-            // Create encrypt button
-            const encryptBtn = document.createElement('button');
-            encryptBtn.id = 'msg-encrypt-btn';
-            encryptBtn.className = 'msg-encrypt-btn';
-            encryptBtn.title = 'Mã hóa tin nhắn trước khi gửi (Ctrl+Shift+E)';
-            encryptBtn.innerHTML = '🔐';
-            
-            // Find where to insert button (near send button)
-            const sendButton = document.querySelector('[aria-label*="Send"], button[aria-label*="Gửi"]');
-            if (sendButton && sendButton.parentElement) {
-                sendButton.parentElement.insertBefore(encryptBtn, sendButton);
+setInterval(() => {
+    try {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) {
+            // No active selection → reset tracker so next selection can trigger
+            if (previousSelection !== '') {
+                previousSelection = '';
             }
-
-            // Encrypt button click handler
-            encryptBtn.addEventListener('click', () => {
-                encryptMessage(messageInput);
-            });
-
-            // Keyboard shortcut
-            document.addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyE') {
-                    e.preventDefault();
-                    encryptMessage(messageInput);
-                }
-            });
+            return;
         }
-    }, 500);
-}
+        
+        const text = sel.toString().trim();
+        
+        // Skip empty, skip already processed
+        if (!text || text === previousSelection) {
+            return;
+        }
+        
+        // Only process text that's at least 3 chars
+        if (text.length < 3) {
+            return;
+        }
+        
+        // Mark as processed
+        previousSelection = text;
+        
+        // Get bounding rect for positioning
+        let rect = null;
+        if (sel.rangeCount > 0) {
+            rect = sel.getRangeAt(0).getBoundingClientRect();
+        }
+        
+        // Try to decrypt
+        if (currentPassphrase) {
+            try {
+                const decrypted = messageCrypto.decrypt(text, currentPassphrase);
+                // Copy to clipboard
+                navigator.clipboard.writeText(decrypted).catch(() => {});
+                showPopup(decrypted, '🔓 ĐÃ GIẢI MÃ', rect);
+            } catch (e) {
+                // Can't decrypt — show the raw text
+                showPopup(text, '📋 ĐOẠN TEXT ĐÃ CHỌN', rect);
+            }
+        } else {
+            showPopup(text, '⚠️ CHƯA LƯU MẬT KHẨU — vào Extension để lưu', rect);
+        }
+    } catch (err) {
+        console.error('🔐 [MsgEncrypt] Polling error:', err);
+    }
+}, 300);
 
-/**
- * Encrypt message in input field
- */
+console.log('🔐 [MsgEncrypt] Selection polling started (every 300ms) ✅');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUT — Ctrl+Shift+E to encrypt
+// ═══════════════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyE') {
+        e.preventDefault();
+        const input = document.querySelector('[contenteditable="true"]');
+        if (input) {
+            encryptMessage(input);
+        }
+    }
+}, true);
+
 function encryptMessage(inputElement) {
     if (!currentPassphrase) {
         alert('❌ Vui lòng lưu mật khẩu trước (click biểu tượng extension)');
@@ -365,31 +228,16 @@ function encryptMessage(inputElement) {
 
     try {
         const text = inputElement.textContent.trim();
-        
         if (!text) {
             alert('⚠️ Vui lòng nhập tin nhắn');
             return;
         }
 
         const encrypted = messageCrypto.encrypt(text, currentPassphrase);
-        
-        // Clear and set encrypted text
         inputElement.textContent = encrypted;
-        
-        // Trigger input event to update send button
         inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        
-        // Show confirmation
-        console.log('✅ Tin nhắn đã được mã hóa - Nhấn gửi để tiếp tục');
+        console.log('🔐 [MsgEncrypt] Message encrypted ✅');
     } catch (error) {
         alert('❌ Lỗi: ' + error.message);
     }
-}
-
-// Also intercept native send (for automatic encryption if needed in future)
-interceptMessageSend();
-
-function interceptMessageSend() {
-    // This is optional - for now we use manual encryption
-    // Can be extended to auto-encrypt
 }
