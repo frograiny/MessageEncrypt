@@ -276,15 +276,10 @@
             <strong>⌨️ Phím tắt:</strong> Ctrl+Shift+E (hoặc Cmd+Shift+E trên Mac) để mã hóa nhanh
         </div>
 
-        <button onclick="openPopup()">⚙️ Cài đặt Passphrase</button>
-        <button class="secondary-btn" onclick="window.close()">✅ Đóng</button>
+        <button id="btn-setup">⚙️ Cài đặt Passphrase</button>
+        <button id="btn-close" class="secondary-btn">✅ Đóng</button>
     </div>
 
-    <script>
-        function openPopup() {
-            chrome.runtime.openOptionsPage ? chrome.runtime.openOptionsPage() : 
-            window.open(chrome.runtime.getURL('src/popup.html'));
-        }
-    </script>
+    <script src="onboarding.js"></script>
 </body>
 </html>
