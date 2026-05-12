@@ -19,14 +19,15 @@ class MessageCrypto {
         try {
             // URI encode to support Vietnamese and special characters safely
             const safeText = encodeURIComponent(text);
+            const safePassphrase = encodeURIComponent(passphrase);
 
             // XOR cipher
             let encrypted = '';
-            const phraseLength = passphrase.length;
+            const phraseLength = safePassphrase.length;
             
             for (let i = 0; i < safeText.length; i++) {
                 const charCode = safeText.charCodeAt(i);
-                const phraseCharCode = passphrase.charCodeAt(i % phraseLength);
+                const phraseCharCode = safePassphrase.charCodeAt(i % phraseLength);
                 encrypted += String.fromCharCode(charCode ^ phraseCharCode);
             }
             
@@ -61,14 +62,15 @@ class MessageCrypto {
 
             // Decode from base64
             const decoded = atob(text);
+            const safePassphrase = encodeURIComponent(passphrase);
             
             // XOR decipher
             let decrypted = '';
-            const phraseLength = passphrase.length;
+            const phraseLength = safePassphrase.length;
             
             for (let i = 0; i < decoded.length; i++) {
                 const charCode = decoded.charCodeAt(i);
-                const phraseCharCode = passphrase.charCodeAt(i % phraseLength);
+                const phraseCharCode = safePassphrase.charCodeAt(i % phraseLength);
                 decrypted += String.fromCharCode(charCode ^ phraseCharCode);
             }
             
